@@ -9,11 +9,17 @@ Set the following environment variables in your Railway project:
 ### Required Variables
 ```
 DEBUG=False
-SECRET_KEY=your-production-secret-key
-ALLOWED_HOSTS=your-railway-domain.railway.app,localhost
+SECRET_KEY=your-production-secret-key-change-this
+ALLOWED_HOSTS=your-domain.railway.app,localhost
 DATABASE_URL=postgresql://user:password@host:port/database
 MONGODB_URI=mongodb://username:password@host:port/database
+MONGO_DB_NAME=edrs_mongo
 ```
+
+### Important Notes
+- Railway automatically provides DATABASE_URL when you add PostgreSQL service
+- For MongoDB, you can use Railway's MongoDB plugin or MongoDB Atlas
+- Make sure to replace 'your-domain' with your actual Railway domain
 
 ### Optional Variables
 ```

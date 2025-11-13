@@ -28,9 +28,14 @@ THIRD_PARTY_APPS = [
     'rest_framework',
     'corsheaders',
     'drf_spectacular',
-    'django_extensions',
-    'django_filters',
 ]
+
+# Only add these if installed (optional dev dependencies)
+import importlib.util
+if importlib.util.find_spec('django_extensions'):
+    THIRD_PARTY_APPS.append('django_extensions')
+if importlib.util.find_spec('django_filters'):
+    THIRD_PARTY_APPS.append('django_filters')
 
 LOCAL_APPS = [
     'apps.authentication',
@@ -81,15 +86,10 @@ DATABASES = {
 }
 
 # MongoDB Configuration (using mongoengine)
-import mongoengine
-
 MONGODB_SETTINGS = {
     'db': config('MONGO_DB_NAME', default='edrs_mongo'),
     'host': config('MONGODB_URI', default='mongodb://localhost:27017/edrs_mongo'),
 }
-
-# Connect to MongoDB
-mongoengine.connect(**MONGODB_SETTINGS)
 
 # Cache Configuration (Redis)
 CACHES = {
