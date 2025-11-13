@@ -13,7 +13,15 @@ class CoreConfig(AppConfig):
         
         if hasattr(settings, 'MONGODB_SETTINGS'):
             try:
-                mongoengine.connect(**settings.MONGODB_SETTINGS)
+                # Add connection timeout and retry logic for Railway
+                mongodb_settings = settings.MONGODB_SETTINGS.copy()
+                mongodb_settings.update({
+                    'connect': False,  # Lazy connection
+                    'serverSelectionTimeoutMS': 5000,
+                    'connectTimeoutMS': 5000,
+                })
+                mongoengine.connect(**mongodb_settings)
+                print("MongoDB connection initialized successfully")
             except Exception as e:
                 print(f"MongoDB connection failed: {e}")
                 # Don't crash the app if MongoDB is not available

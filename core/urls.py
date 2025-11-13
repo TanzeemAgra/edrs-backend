@@ -2,13 +2,26 @@ from django.contrib import admin
 from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.http import JsonResponse
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
 
+# Health check view
+def health_check(request):
+    """Simple health check endpoint for Railway"""
+    return JsonResponse({
+        'status': 'healthy',
+        'service': 'EDRS Backend API',
+        'version': '1.0.0'
+    })
+
 urlpatterns = [
+    # Health check (for Railway deployment)
+    path('health/', health_check, name='health_check'),
+    
     # Admin
     path('admin/', admin.site.urls),
     

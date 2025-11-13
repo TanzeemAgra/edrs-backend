@@ -12,7 +12,17 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
+# Railway automatically sets RAILWAY_PUBLIC_DOMAIN
+RAILWAY_PUBLIC_DOMAIN = config('RAILWAY_PUBLIC_DOMAIN', default='')
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+
+# Add Railway domain if present
+if RAILWAY_PUBLIC_DOMAIN:
+    ALLOWED_HOSTS.append(RAILWAY_PUBLIC_DOMAIN)
+    
+# Allow all Railway domains in production
+if not DEBUG:
+    ALLOWED_HOSTS.extend(['*.railway.app', '*.up.railway.app'])
 
 # Application definition
 DJANGO_APPS = [
@@ -81,7 +91,9 @@ WSGI_APPLICATION = 'core.wsgi.application'
 # PostgreSQL as primary database
 DATABASES = {
     'default': dj_database_url.config(
-        default=config('DATABASE_URL', default='postgresql://postgres:postgres@localhost:5432/edrs_db')
+        default=config('DATABASE_URL', default='postgresql://postgres:postgres@localhost:5432/edrs_db'),
+        conn_max_age=600,
+        conn_health_checks=True,
     )
 }
 

@@ -59,6 +59,40 @@ EMAIL_HOST_PASSWORD=your-app-password
 
 4. **Deploy:**
    ```bash
+   git add .
+   git commit -m "Fix Railway healthcheck and deployment"
+   git push origin main
+   ```
+
+## Healthcheck Fix
+
+The deployment includes a custom health check endpoint at `/health/` that:
+- ✅ Doesn't require authentication 
+- ✅ Returns JSON response with service status
+- ✅ Works properly with Railway's healthcheck system
+
+### Healthcheck Response:
+```json
+{
+  "status": "healthy",
+  "service": "EDRS Backend API", 
+  "version": "1.0.0"
+}
+```
+
+## Troubleshooting
+
+### If healthcheck still fails:
+1. Check Railway logs for detailed error messages
+2. Verify DATABASE_URL is properly set
+3. Ensure PostgreSQL service is running
+4. Check if migrations ran successfully
+
+### Common Issues:
+- **Database connection timeout**: Increase healthcheck timeout in railway.json
+- **Missing environment variables**: Double-check all required variables are set
+- **Migration errors**: Check database permissions and connectivity
+   ```bash
    railway up
    ```
 
