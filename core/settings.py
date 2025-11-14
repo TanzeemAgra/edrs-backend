@@ -99,15 +99,25 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# Database
+# Database Configuration
 # PostgreSQL as primary database
+DATABASE_URL = config('DATABASE_URL', default='postgresql://postgres:postgres@localhost:5432/edrs_db')
+
+# Parse database URL with Railway-specific handling
 DATABASES = {
     'default': dj_database_url.config(
-        default=config('DATABASE_URL', default='postgresql://postgres:postgres@localhost:5432/edrs_db'),
+        default=DATABASE_URL,
         conn_max_age=600,
         conn_health_checks=True,
     )
 }
+
+# Railway-specific database configuration
+if RAILWAY_ENVIRONMENT == 'production':
+    # Ensure SSL is enabled for Railway PostgreSQL
+    DATABASES['default']['OPTIONS'] = {
+        'sslmode': 'require',
+    }
 
 # MongoDB Configuration (using mongoengine)
 MONGODB_SETTINGS = {
@@ -159,7 +169,10 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
-STATICFILES_DIRS = [BASE_DIR / 'static']
+# Only add static dirs if they exist
+STATICFILES_DIRS = []
+if (BASE_DIR / 'static').exists():
+    STATICFILES_DIRS.append(BASE_DIR / 'static')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # Media files
