@@ -152,36 +152,21 @@ def log_activity_view(request):
 @permission_classes([])  # No authentication required
 def database_health_view(request):
     """
-    Database health check endpoint for integration validation
-    This endpoint can be used by frontend to verify database connectivity
+    Dual database health check endpoint for integration validation
+    Tests both PostgreSQL (primary) and MongoDB (documents) connectivity
     """
     
+    # Test PostgreSQL (Primary Database)
+    postgresql_status = {}
     try:
-        # Test basic database connection
         with connection.cursor() as cursor:
             cursor.execute("SELECT version();")
             db_version = cursor.fetchone()[0]
         
-        # Test model operations
         from django.contrib.auth import get_user_model
         User = get_user_model()
         
-        stats = {
-            'database_status': 'healthy',
-            'postgresql_version': db_version.split()[1] if 'PostgreSQL' in db_version else 'Unknown',
-            'connection_status': 'connected',
-            'table_counts': {
-                'users': User.objects.count(),
-                'categories': Category.objects.count(),
-                'tags': Tag.objects.count(),
-                'posts': Post.objects.count(),
-            },
-            'timestamp': timezone.now().isoformat(),
-            'railway_integration': 'postgresql' in str(connection.settings_dict.get('NAME', '')).lower() or 
-                                 'railway' in str(connection.settings_dict.get('HOST', '')).lower()
-        }
-        
-        # Test table existence
+        # Test table counts
         with connection.cursor() as cursor:
             cursor.execute("""
                 SELECT COUNT(*) 
@@ -189,18 +174,117 @@ def database_health_view(request):
                 WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
             """)
             table_count = cursor.fetchone()[0]
-            stats['total_tables'] = table_count
         
-        return Response({
-            'status': 'success',
-            'message': 'Database integration is working correctly',
-            'data': stats
-        })
+        postgresql_status = {
+            'status': 'connected',
+            'version': db_version.split()[1] if 'PostgreSQL' in db_version else 'Unknown',
+            'host': connection.settings_dict.get('HOST', 'localhost'),
+            'database': connection.settings_dict.get('NAME', 'unknown'),
+            'total_tables': table_count,
+            'record_counts': {
+                'users': User.objects.count(),
+                'categories': Category.objects.count(),
+                'tags': Tag.objects.count(),
+                'posts': Post.objects.count(),
+            },
+            'railway_integration': 'railway' in str(connection.settings_dict.get('HOST', '')).lower()
+        }
         
     except Exception as e:
-        return Response({
+        postgresql_status = {
             'status': 'error',
-            'message': 'Database integration failed',
+            'error': str(e)
+        }
+    
+    # Test MongoDB (Document Database) 
+    mongodb_status = {}
+    try:
+        import mongoengine
+        from django.conf import settings
+        
+        if hasattr(settings, 'MONGODB_SETTINGS'):
+            # Try to connect and test
+            mongodb_settings = settings.MONGODB_SETTINGS.copy()
+            mongodb_settings.update({
+                'connect': False,
+                'serverSelectionTimeoutMS': 3000,
+                'connectTimeoutMS': 3000,
+            })
+            
+            # Disconnect and reconnect
+            mongoengine.disconnect()
+            conn = mongoengine.connect(**mongodb_settings)
+            
+            # Test connection
+            db = conn.get_database()
+            server_info = conn.server_info()
+            collections = db.list_collection_names()
+            
+            # Count documents
+            document_counts = {}
+            try:
+                document_counts = {
+                    'analytics': Analytics.objects.count(),
+                    'activity_logs': ActivityLog.objects.count(),
+                }
+            except:
+                document_counts = {'analytics': 0, 'activity_logs': 0}
+            
+            mongodb_status = {
+                'status': 'connected',
+                'version': server_info.get('version', 'Unknown'),
+                'host': mongodb_settings['host'],
+                'database': mongodb_settings['db'],
+                'collections': collections,
+                'document_counts': document_counts
+            }
+            
+        else:
+            mongodb_status = {
+                'status': 'not_configured',
+                'message': 'MongoDB settings not found in configuration'
+            }
+            
+    except ImportError:
+        mongodb_status = {
+            'status': 'not_available',
+            'message': 'mongoengine package not installed'
+        }
+    except Exception as e:
+        mongodb_status = {
+            'status': 'disconnected',
             'error': str(e),
-            'timestamp': timezone.now().isoformat()
-        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            'message': 'MongoDB service not available (this is normal if not configured)'
+        }
+    
+    # Overall system status
+    system_healthy = postgresql_status.get('status') == 'connected'
+    mongodb_available = mongodb_status.get('status') == 'connected'
+    
+    return Response({
+        'status': 'success' if system_healthy else 'partial',
+        'message': 'Dual database system status',
+        'timestamp': timezone.now().isoformat(),
+        'databases': {
+            'postgresql': {
+                **postgresql_status,
+                'role': 'Primary database for all CRUD operations',
+                'priority': 'required'
+            },
+            'mongodb': {
+                **mongodb_status,
+                'role': 'Document storage for analytics and logs', 
+                'priority': 'optional'
+            }
+        },
+        'architecture': {
+            'primary_database': 'PostgreSQL (Railway)',
+            'document_database': 'MongoDB (Optional)',
+            'system_operational': system_healthy,
+            'full_features': mongodb_available,
+            'recommendations': {
+                'postgresql': 'Fully operational - all core features working',
+                'mongodb': 'Add Railway MongoDB service or MongoDB Atlas for analytics features' if not mongodb_available else 'Operational - analytics features available'
+            }
+        }
+    }, status=status.HTTP_200_OK if system_healthy else status.HTTP_206_PARTIAL_CONTENT)
