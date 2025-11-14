@@ -1,0 +1,84 @@
+# EDRS Backend - Local Development Dockerfile
+# Smart configuration for local Docker environment
+
+FROM python:3.11-slim
+
+# Set environment variables
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    DEBIAN_FRONTEND=noninteractive \
+    PIP_NO_CACHE_DIR=1 \
+    PIP_DISABLE_PIP_VERSION_CHECK=1
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    postgresql-client \
+    build-essential \
+    libpq-dev \
+    curl \
+    tesseract-ocr \
+    tesseract-ocr-eng \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender-dev \
+    libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set work directory
+WORKDIR /app
+
+# Create directories
+RUN mkdir -p /app/logs /app/static /app/media
+
+# Copy requirements and install Python dependencies
+COPY requirements.txt requirements-pid.txt ./
+RUN pip install --upgrade pip && \
+    pip install -r requirements.txt && \
+    pip install -r requirements-pid.txt
+
+# Install development dependencies
+RUN pip install \
+    django-debug-toolbar \
+    django-extensions \
+    ipython \
+    pytest \
+    pytest-django
+
+# Copy project
+COPY . .
+
+# Create superuser script
+RUN echo '#!/bin/bash\n\
+echo "Creating superuser..."\n\
+python manage.py shell -c "\n\
+from django.contrib.auth import get_user_model;\n\
+User = get_user_model();\n\
+if not User.objects.filter(username='admin').exists():\n\
+    User.objects.create_superuser('admin', 'admin@local.com', 'admin123')\n\
+    print('Superuser created successfully')\n\
+else:\n\
+    print('Superuser already exists')\n\
+"' > /app/create_superuser.sh && chmod +x /app/create_superuser.sh
+
+# Create wait for database script
+RUN echo '#!/bin/bash\n\
+echo "Waiting for database..."\n\
+while ! pg_isready -h $POSTGRES_HOST -p $POSTGRES_PORT -U $POSTGRES_USER; do\n\
+  echo "Waiting for PostgreSQL..."\n\
+  sleep 2\n\
+done\n\
+echo "Database is ready!"' > /app/wait_for_db.sh && chmod +x /app/wait_for_db.sh
+
+# Set permissions
+RUN chmod +x /app/manage.py
+
+# Expose port
+EXPOSE 8000
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:8000/health/ || exit 1
+
+# Default command
+CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]

@@ -63,6 +63,8 @@ LOCAL_APPS = [
     'apps.authentication',
     'apps.users',
     'apps.core',
+    'apps.ai',
+    'apps.pid_analysis',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -220,9 +222,17 @@ SPECTACULAR_SETTINGS = {
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = config(
     'CORS_ALLOWED_ORIGINS',
-    default='http://localhost:3000,http://127.0.0.1:3000',
+    default='http://localhost:3000,http://127.0.0.1:3000,https://edrs-frontend.vercel.app',
     cast=lambda v: [s.strip() for s in v.split(',')]
 )
+
+# Add Vercel deployment domains for production
+if RAILWAY_ENVIRONMENT == 'production':
+    CORS_ALLOWED_ORIGINS.extend([
+        'https://edrs-frontend.vercel.app',
+        'https://edrs-frontend-git-main.vercel.app',
+        'https://edrs-frontend-*-tanzeemagra.vercel.app',  # Branch deployments
+    ])
 
 CORS_ALLOW_CREDENTIALS = True
 
@@ -299,3 +309,22 @@ EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'
+
+# =================================================================
+# 🤖 OPENAI CONFIGURATION (Local Development)
+# =================================================================
+
+# OpenAI Settings (secure, environment-based)
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
+OPENAI_MAX_TOKENS = int(os.getenv('OPENAI_MAX_TOKENS', '1000'))
+OPENAI_TEMPERATURE = float(os.getenv('OPENAI_TEMPERATURE', '0.7'))
+
+# OpenAI Configuration Object
+OPENAI_SETTINGS = {
+    'api_key': OPENAI_API_KEY,
+    'model': OPENAI_MODEL,
+    'max_tokens': OPENAI_MAX_TOKENS,
+    'temperature': OPENAI_TEMPERATURE,
+    'enabled': os.getenv('ENABLE_OPENAI_INTEGRATION', 'False').lower() == 'true',
+}

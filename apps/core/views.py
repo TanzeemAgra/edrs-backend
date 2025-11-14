@@ -8,6 +8,13 @@ from rest_framework.filters import SearchFilter, OrderingFilter
 from .models import Category, Tag, Post, Analytics, ActivityLog
 from .serializers import CategorySerializer, TagSerializer, PostSerializer, PostListSerializer
 
+# Import OpenAI service for health checks
+try:
+    from core.utils.openai_service import get_openai_status
+except ImportError:
+    def get_openai_status():
+        return {"status": "not_available", "message": "OpenAI service not configured"}
+
 
 # Category Views
 class CategoryListCreateView(generics.ListCreateAPIView):
@@ -257,9 +264,13 @@ def database_health_view(request):
             'message': 'MongoDB service not available (this is normal if not configured)'
         }
     
+    # Test OpenAI Service
+    openai_status = get_openai_status()
+    
     # Overall system status
     system_healthy = postgresql_status.get('status') == 'connected'
     mongodb_available = mongodb_status.get('status') == 'connected'
+    openai_available = openai_status.get('status') == 'healthy'
     
     return Response({
         'status': 'success' if system_healthy else 'partial',
@@ -277,6 +288,13 @@ def database_health_view(request):
                 'priority': 'optional'
             }
         },
+        'ai_services': {
+            'openai': {
+                **openai_status,
+                'role': 'AI-powered document analysis and suggestions',
+                'priority': 'optional'
+            }
+        },
         'architecture': {
             'primary_database': 'PostgreSQL (Railway)',
             'document_database': 'MongoDB (Optional)',
@@ -284,7 +302,8 @@ def database_health_view(request):
             'full_features': mongodb_available,
             'recommendations': {
                 'postgresql': 'Fully operational - all core features working',
-                'mongodb': 'Add Railway MongoDB service or MongoDB Atlas for analytics features' if not mongodb_available else 'Operational - analytics features available'
+                'mongodb': 'Add Railway MongoDB service or MongoDB Atlas for analytics features' if not mongodb_available else 'Operational - analytics features available',
+                'openai': 'API key configured - AI features available' if openai_available else 'Add OpenAI API key for AI-powered features'
             }
         }
     }, status=status.HTTP_200_OK if system_healthy else status.HTTP_206_PARTIAL_CONTENT)
