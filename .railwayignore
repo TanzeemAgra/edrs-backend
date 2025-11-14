@@ -1,0 +1,56 @@
+# Railway Ignore File
+# Exclude files that don't need to be deployed
+
+# Development files
+*.pyc
+__pycache__/
+.env
+.env.local
+.vscode/
+.idea/
+
+# Database files
+*.sqlite3
+db.sqlite3
+
+# Log files
+*.log
+logs/
+
+# Media files (use Railway volumes for production)
+media/
+
+# Cache
+.cache/
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+test_*.py
+*_test.py
+tests/
+
+# Development tools
+railway_precheck.py
+railway_native_deploy.py
+validate_dual_database.py
+test_mongodb.py
+
+# Git
+.git/
+.gitignore
+
+# Virtual environment
+venv/
+env/
+.virtualenv/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Backup files
+*.bak
+*.backup
