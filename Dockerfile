@@ -1,10 +1,11 @@
 # Use Python 3.11 slim image
 FROM python:3.11-slim
 
-# Set environment variables
+# Set environment variables for Railway
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
 ENV DEBIAN_FRONTEND=noninteractive
+ENV PORT=8000
 
 # Set work directory
 WORKDIR /app
@@ -16,26 +17,28 @@ RUN apt-get update \
         postgresql-client \
         libpq-dev \
         curl \
+        bash \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project
-COPY . /app/
+# Copy project files
+COPY . .
 
-# Create staticfiles directory
-RUN mkdir -p /app/staticfiles
+# Make entrypoint executable
+RUN chmod +x ./entrypoint.sh
 
-# Collect static files
-RUN python manage.py collectstatic --noinput || true
+# Create necessary directories
+RUN mkdir -p /app/staticfiles /app/logs /app/media
 
-# Create logs directory
-RUN mkdir -p /app/logs
+# Expose port (Railway will override with $PORT)
+EXPOSE $PORT
 
-# Expose port
-EXPOSE 8000
+# Health check
+HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost:$PORT/health/ || exit 1
 
-# Start server
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "--workers", "3", "--timeout", "120", "core.wsgi:application"]
+# Default command (Railway will override via railway.json startCommand)
+CMD ["./entrypoint.sh"]

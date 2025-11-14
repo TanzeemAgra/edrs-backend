@@ -12,17 +12,29 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
 
-# Railway automatically sets RAILWAY_PUBLIC_DOMAIN
+# Railway deployment configuration
+RAILWAY_ENVIRONMENT = config('RAILWAY_ENVIRONMENT', default='')
 RAILWAY_PUBLIC_DOMAIN = config('RAILWAY_PUBLIC_DOMAIN', default='')
+
+# Configure ALLOWED_HOSTS for Railway deployment
 ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
 
-# Add Railway domain if present
+# Add Railway-specific hosts
+if RAILWAY_ENVIRONMENT == 'production':
+    ALLOWED_HOSTS.extend([
+        '.railway.app',
+        '.up.railway.app', 
+        'localhost',
+        '127.0.0.1',
+        '0.0.0.0',
+    ])
+    
+# Add specific Railway domain if available
 if RAILWAY_PUBLIC_DOMAIN:
     ALLOWED_HOSTS.append(RAILWAY_PUBLIC_DOMAIN)
-    
-# Allow all Railway domains in production
-if not DEBUG:
-    ALLOWED_HOSTS.extend(['*.railway.app', '*.up.railway.app'])
+
+# Remove duplicates and empty strings
+ALLOWED_HOSTS = list(filter(None, set(ALLOWED_HOSTS)))
 
 # Application definition
 DJANGO_APPS = [
