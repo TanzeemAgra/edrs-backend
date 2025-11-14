@@ -2,6 +2,7 @@ from rest_framework import generics, permissions, status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from django.utils import timezone
+from django.db import connection
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
 from .models import Category, Tag, Post, Analytics, ActivityLog
@@ -145,3 +146,61 @@ def log_activity_view(request):
         return Response({'message': 'Activity logged'}, status=status.HTTP_201_CREATED)
     except Exception as e:
         return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+@permission_classes([])  # No authentication required
+def database_health_view(request):
+    """
+    Database health check endpoint for integration validation
+    This endpoint can be used by frontend to verify database connectivity
+    """
+    
+    try:
+        # Test basic database connection
+        with connection.cursor() as cursor:
+            cursor.execute("SELECT version();")
+            db_version = cursor.fetchone()[0]
+        
+        # Test model operations
+        from django.contrib.auth import get_user_model
+        User = get_user_model()
+        
+        stats = {
+            'database_status': 'healthy',
+            'postgresql_version': db_version.split()[1] if 'PostgreSQL' in db_version else 'Unknown',
+            'connection_status': 'connected',
+            'table_counts': {
+                'users': User.objects.count(),
+                'categories': Category.objects.count(),
+                'tags': Tag.objects.count(),
+                'posts': Post.objects.count(),
+            },
+            'timestamp': timezone.now().isoformat(),
+            'railway_integration': 'postgresql' in str(connection.settings_dict.get('NAME', '')).lower() or 
+                                 'railway' in str(connection.settings_dict.get('HOST', '')).lower()
+        }
+        
+        # Test table existence
+        with connection.cursor() as cursor:
+            cursor.execute("""
+                SELECT COUNT(*) 
+                FROM information_schema.tables 
+                WHERE table_schema = 'public' AND table_type = 'BASE TABLE';
+            """)
+            table_count = cursor.fetchone()[0]
+            stats['total_tables'] = table_count
+        
+        return Response({
+            'status': 'success',
+            'message': 'Database integration is working correctly',
+            'data': stats
+        })
+        
+    except Exception as e:
+        return Response({
+            'status': 'error',
+            'message': 'Database integration failed',
+            'error': str(e),
+            'timestamp': timezone.now().isoformat()
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

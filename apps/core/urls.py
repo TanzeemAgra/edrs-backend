@@ -18,4 +18,7 @@ urlpatterns = [
     path('dashboard/stats/', views.dashboard_stats_view, name='dashboard-stats'),
     path('analytics/track/', views.track_analytics_view, name='track-analytics'),
     path('activity/log/', views.log_activity_view, name='log-activity'),
+    
+    # Database Health Check
+    path('database/health/', views.database_health_view, name='database-health'),
 ]
