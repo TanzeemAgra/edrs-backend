@@ -213,8 +213,8 @@ REST_FRAMEWORK = {
 
 # Spectacular settings (API Documentation)
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'EDRS API',
-    'DESCRIPTION': 'API documentation for EDRS project',
+    'TITLE': 'EDRS Engineering Platform API',
+    'DESCRIPTION': 'Professional engineering document management and P&ID analysis platform API',
     'VERSION': '1.0.0',
     'SERVE_INCLUDE_SCHEMA': False,
 }
@@ -299,13 +299,35 @@ CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
-# Email Configuration
-EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
-EMAIL_HOST = config('EMAIL_HOST', default='')
-EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
-EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+# Email Configuration - AWS SES Integration
+USE_AWS_SES = config('USE_AWS_SES', default=False, cast=bool)
+
+if USE_AWS_SES:
+    # AWS SES Configuration
+    EMAIL_BACKEND = 'django_ses.SESBackend'
+    AWS_SES_REGION_NAME = config('AWS_SES_REGION_NAME', default='us-east-1')
+    AWS_SES_REGION_ENDPOINT = f'email.{AWS_SES_REGION_NAME}.amazonaws.com'
+    # Use existing AWS credentials
+    AWS_SES_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
+    AWS_SES_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
+    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='EDRS Support <noreply@rejlers.ae>')
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
+else:
+    # Fallback SMTP Configuration
+    EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+    EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+    EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+    EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+    EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='EDRS Support <noreply@rejlers.ae>')
+
+# Contact Form Email Recipients
+CONTACT_EMAIL_RECIPIENTS = config(
+    'CONTACT_EMAIL_RECIPIENTS', 
+    default='mohammed.agra@rejlers.ae',
+    cast=lambda v: [email.strip() for email in v.split(',')]
+)
 
 # Custom User Model
 AUTH_USER_MODEL = 'users.User'

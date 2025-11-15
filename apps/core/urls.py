@@ -21,4 +21,10 @@ urlpatterns = [
     
     # Database Health Check
     path('database/health/', views.database_health_view, name='database-health'),
+    
+    # Document Library and Contact
+    path('document-library/', views.document_library, name='document_library'),
+    path('contact/', views.contact_create, name='contact_create'),
+    path('contact/info/', views.contact_info, name='contact_info'),
+    path('health/', views.health_check, name='health_check'),
 ]

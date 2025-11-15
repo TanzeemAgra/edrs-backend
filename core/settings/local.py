@@ -152,12 +152,47 @@ if os.getenv('ENABLE_DJANGO_EXTENSIONS', 'True').lower() == 'true':
 # 📧 EMAIL CONFIGURATION
 # =================================================================
 
-# Console Email Backend for local development
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False').lower() == 'true'
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@edrs.local')
+# AWS SES SMTP Configuration for local development
+USE_AWS_SES = os.getenv('USE_AWS_SES', 'True').lower() == 'true'
+
+if USE_AWS_SES:
+    # AWS SES SMTP Configuration
+    EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+    # Try different regions - UAE might use eu-west-1 or ap-south-1
+    SES_REGION = os.getenv('AWS_SES_REGION', 'eu-west-1')  # Default to EU West (Ireland)
+    EMAIL_HOST = f'email-smtp.{SES_REGION}.amazonaws.com'
+    EMAIL_PORT = 587
+    EMAIL_USE_TLS = True
+    EMAIL_HOST_USER = os.getenv('AWS_SES_SMTP_USERNAME', '')
+    EMAIL_HOST_PASSWORD = os.getenv('AWS_SES_SMTP_PASSWORD', '')
+    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'EDRS Support <noreply@rejlers.ae>')
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
+    
+    # Debug AWS SES configuration
+    print(f"   SMTP Username: {EMAIL_HOST_USER}")
+    print(f"   SMTP Password: {'*' * len(EMAIL_HOST_PASSWORD) if EMAIL_HOST_PASSWORD else 'NOT SET'}")
+    print(f"   Default From: {DEFAULT_FROM_EMAIL}")
+    
+    # Contact form recipients
+    CONTACT_RECIPIENTS = [
+        'mohammed.agra@rejlers.ae',
+    ]
+    
+    print(f"✅ AWS SES SMTP Configuration Active")
+    print(f"   SMTP Host: {EMAIL_HOST}")
+    print(f"   Region: {SES_REGION}")
+    print(f"   SMTP Port: {EMAIL_PORT}")
+    print(f"   From Email: {DEFAULT_FROM_EMAIL}")
+    print(f"   Contact Recipients: {CONTACT_RECIPIENTS}")
+else:
+    # Console Email Backend fallback
+    EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+    EMAIL_HOST = os.getenv('EMAIL_HOST', 'localhost')
+    EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+    EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'False').lower() == 'true'
+    DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', 'noreply@edrs.local')
+    
+    print(f"📧 Console Email Backend Active (Development Mode)")
 
 # =================================================================
 # 📁 STATIC & MEDIA FILES
@@ -173,6 +208,39 @@ STATICFILES_DIRS = [
 # Media files
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# =================================================================
+# ☁️ STORAGE CONFIGURATION
+# =================================================================
+
+# Override S3 settings for local development
+# Use local storage for development, S3 for production
+USE_S3 = os.getenv('USE_S3', 'False').lower() == 'true'
+
+if USE_S3:
+    # Rejlers Abu Dhabi S3 Configuration
+    AWS_ACCESS_KEY_ID = os.getenv('AWS_ACCESS_KEY_ID')
+    AWS_SECRET_ACCESS_KEY = os.getenv('AWS_SECRET_ACCESS_KEY')
+    AWS_STORAGE_BUCKET_NAME = os.getenv('AWS_STORAGE_BUCKET_NAME', 'edrs-documents')
+    AWS_S3_REGION_NAME = os.getenv('AWS_S3_REGION_NAME', 'us-east-1')
+    AWS_S3_ROOT_FOLDER = os.getenv('AWS_S3_ROOT_FOLDER', 'rejlers-abudhabi')
+    
+    # Use Rejlers custom S3 storage
+    DEFAULT_FILE_STORAGE = 'core.storage.RejlersS3Storage'
+    AWS_S3_CUSTOM_DOMAIN = f'{AWS_STORAGE_BUCKET_NAME}.s3.amazonaws.com'
+    AWS_S3_OBJECT_PARAMETERS = {
+        'CacheControl': 'max-age=86400',
+    }
+    AWS_DEFAULT_ACL = 'private'
+    AWS_S3_FILE_OVERWRITE = False
+    AWS_QUERYSTRING_AUTH = True
+    AWS_QUERYSTRING_EXPIRE = 7200  # 2 hours for engineering documents
+    
+    print(f"📁 Using Rejlers Abu Dhabi S3 Storage: {AWS_STORAGE_BUCKET_NAME}/{AWS_S3_ROOT_FOLDER}")
+else:
+    # Use local file storage for development
+    DEFAULT_FILE_STORAGE = 'core.storage.EDRSLocalStorage'
+    print(f"📁 Using Local File Storage: {MEDIA_ROOT}")
 
 # =================================================================
 # 📊 LOGGING CONFIGURATION

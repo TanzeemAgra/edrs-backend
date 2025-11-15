@@ -1,6 +1,6 @@
 # EDRS Backend
 
-Django REST API backend for the Electronic Document Recording System.
+Professional Django REST API backend for the Engineering Document Review System - designed for industrial-grade document management and P&ID analysis.
 
 ## 🏗️ Architecture
 

@@ -111,3 +111,51 @@ class ActivityLog(Document):
         'collection': 'activity_logs',
         'indexes': ['user_id', 'action', 'timestamp']
     }
+
+
+class ContactInquiry(models.Model):
+    """Model to store contact form submissions"""
+    
+    INQUIRY_TYPES = [
+        ('general', 'General Inquiry'),
+        ('technical', 'Technical Support'),
+        ('sales', 'Sales & Licensing'),
+        ('partnership', 'Partnership Opportunities'),
+        ('training', 'Training & Certification'),
+        ('enterprise', 'Enterprise Solutions'),
+    ]
+    
+    STATUS_CHOICES = [
+        ('new', 'New'),
+        ('in_progress', 'In Progress'),
+        ('resolved', 'Resolved'),
+        ('closed', 'Closed'),
+    ]
+    
+    # Contact Information
+    name = models.CharField(max_length=255)
+    email = models.EmailField()
+    company = models.CharField(max_length=255, blank=True)
+    phone = models.CharField(max_length=50, blank=True)
+    
+    # Inquiry Details
+    inquiry_type = models.CharField(max_length=20, choices=INQUIRY_TYPES, default='general')
+    subject = models.CharField(max_length=255)
+    message = models.TextField()
+    
+    # System Fields (using existing column names)
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='new')
+    submitted_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    assigned_to = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # Optional user reference if logged in
+    user = models.ForeignKey(User, on_delete=models.CASCADE, null=True, blank=True, related_name='contact_inquiries')
+    
+    class Meta:
+        ordering = ['-submitted_at']
+        verbose_name = 'Contact Inquiry'
+        verbose_name_plural = 'Contact Inquiries'
+    
+    def __str__(self):
+        return f"{self.name} - {self.subject} ({self.get_inquiry_type_display()})"

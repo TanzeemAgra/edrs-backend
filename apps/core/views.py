@@ -307,3 +307,207 @@ def database_health_view(request):
             }
         }
     }, status=status.HTTP_200_OK if system_healthy else status.HTTP_206_PARTIAL_CONTENT)
+
+
+# Additional views for document library and contact
+from django.http import JsonResponse
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.core.mail import EmailMessage
+import json
+import logging
+from .models import Document, ContactInquiry
+
+# Get logger for this module  
+logger = logging.getLogger(__name__)
+
+
+def document_library(request):
+    """
+    Handle document library requests for EDRS system
+    """
+    try:
+        if request.method == 'GET':
+            # Get query parameters
+            document_type = request.GET.get('type', '')
+            search_term = request.GET.get('search', '')
+            category = request.GET.get('category', '')
+            
+            # Start with all documents
+            documents = Document.objects.all()
+            
+            # Apply filters
+            if document_type:
+                documents = documents.filter(document_type__icontains=document_type)
+            if search_term:
+                documents = documents.filter(title__icontains=search_term)
+            if category:
+                documents = documents.filter(category__icontains=category)
+            
+            # Convert to list of dictionaries
+            document_list = []
+            for doc in documents:
+                document_list.append({
+                    'id': doc.id,
+                    'title': doc.title,
+                    'description': doc.description,
+                    'document_type': doc.document_type,
+                    'category': doc.category,
+                    'file_path': doc.file_path,
+                    'created_at': doc.created_at.isoformat(),
+                    'updated_at': doc.updated_at.isoformat(),
+                })
+            
+            return JsonResponse({
+                'status': 'success',
+                'documents': document_list,
+                'count': len(document_list),
+                'filters_applied': {
+                    'type': document_type,
+                    'search': search_term,
+                    'category': category,
+                }
+            })
+        
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+        
+    except Exception as e:
+        logger.error(f"Document library error: {str(e)}")
+        return JsonResponse({'error': 'Internal server error'}, status=500)
+
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def contact_create(request):
+    """
+    Handle contact form submissions with email notifications to mohammed.agra@rejlers.ae
+    """
+    try:
+        data = json.loads(request.body)
+        
+        # Create contact inquiry
+        contact = ContactInquiry.objects.create(
+            name=data.get('name', ''),
+            email=data.get('email', ''),
+            company=data.get('company', ''),
+            phone=data.get('phone', ''),
+            inquiry_type=data.get('inquiry_type', 'general'),
+            subject=data.get('subject', ''),
+            message=data.get('message', '')
+        )
+        
+        # Send notification email to Mohammed Agra
+        try:
+            send_notification_email(contact)
+            logger.info(f"Contact notification sent to Mohammed Agra for inquiry #{contact.id}")
+        except Exception as email_error:
+            logger.error(f"Failed to send notification email: {str(email_error)}")
+        
+        return JsonResponse({
+            'status': 'success',
+            'message': 'Your inquiry has been submitted successfully. We will contact you soon.',
+            'inquiry_id': contact.id
+        })
+        
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON data'}, status=400)
+    except Exception as e:
+        logger.error(f"Contact form error: {str(e)}")
+        return JsonResponse({'error': 'Failed to process your request'}, status=500)
+
+
+def contact_info(request):
+    """
+    Return contact information for EDRS
+    """
+    return JsonResponse({
+        'company': 'Rejlers AB - EDRS Division',
+        'email': 'mohammed.agra@rejlers.ae',
+        'phone': '+971 XX XXX XXXX',
+        'address': 'UAE Office',
+        'business_hours': 'Sunday - Thursday: 8:00 AM - 6:00 PM GST',
+        'emergency_contact': 'For urgent technical support, please email mohammed.agra@rejlers.ae',
+        'response_time': 'We typically respond within 24 hours during business days'
+    })
+
+
+def health_check(request):
+    """
+    Simple health check endpoint
+    """
+    return JsonResponse({
+        'status': 'healthy',
+        'timestamp': timezone.now().isoformat(),
+        'service': 'EDRS Backend API'
+    })
+
+
+def send_notification_email(contact_inquiry):
+    """
+    Send professional email notification to Mohammed Agra about new contact inquiry
+    """
+    from django.conf import settings
+    
+    # Get recipient from settings or fallback to direct email
+    recipient_email = getattr(settings, 'CONTACT_RECIPIENTS', ['mohammed.agra@rejlers.ae'])[0]
+    
+    # Create professional email content
+    subject = f'New EDRS Contact Inquiry - {contact_inquiry.inquiry_type.title()} from {contact_inquiry.company or contact_inquiry.name}'
+    
+    message_body = f"""
+Dear Mohammed,
+
+You have received a new contact inquiry through the EDRS system.
+
+INQUIRY DETAILS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Name: {contact_inquiry.name}
+Company: {contact_inquiry.company or 'Not specified'}
+Email: {contact_inquiry.email}
+Phone: {contact_inquiry.phone or 'Not provided'}
+
+Inquiry Type: {contact_inquiry.inquiry_type.replace('_', ' ').title()}
+Subject: {contact_inquiry.subject}
+
+Message:
+{contact_inquiry.message}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Submission Details:
+- Inquiry ID: #{contact_inquiry.id}
+- Submitted: {contact_inquiry.submitted_at.strftime('%Y-%m-%d at %H:%M:%S UTC')}
+- Source: Website Contact Form
+
+NEXT STEPS:
+Please respond to {contact_inquiry.email} within 24 hours during business days.
+
+Best regards,
+EDRS Notification System
+Rejlers AB
+"""
+    
+    try:
+        # Use Django's email system (configured with AWS SES)
+        email = EmailMessage(
+            subject=subject,
+            body=message_body,
+            from_email='EDRS Support <noreply@rejlers.ae>',
+            to=[recipient_email],
+            reply_to=[contact_inquiry.email],
+        )
+        
+        # Add headers for better email handling
+        email.extra_headers = {
+            'X-EDRS-Inquiry-ID': str(contact_inquiry.id),
+            'X-EDRS-Type': contact_inquiry.inquiry_type,
+            'X-Client-Email': contact_inquiry.email,
+        }
+        
+        email.send(fail_silently=False)
+        logger.info(f"Notification email sent successfully to {recipient_email} for inquiry #{contact_inquiry.id}")
+        
+    except Exception as e:
+        logger.error(f"Failed to send notification email: {str(e)}")
+        raise e

@@ -8,6 +8,9 @@ from django.contrib.auth import get_user_model
 from django.core.validators import FileExtensionValidator, MinValueValidator, MaxValueValidator
 import uuid
 
+# Import custom storage functions
+from core.storage import get_file_upload_path, get_analysis_result_path
+
 User = get_user_model()
 
 
@@ -53,6 +56,9 @@ class PIDProject(models.Model):
     client_company = models.CharField(max_length=200, blank=True)
     engineering_contractor = models.CharField(max_length=200, blank=True)
     project_manager = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True)
+    
+    # User tracking for Rejlers Abu Dhabi role-based access
+    created_by = models.ForeignKey(User, on_delete=models.CASCADE, related_name='created_projects', null=True, blank=True)
     
     # Status tracking
     created_at = models.DateTimeField(auto_now_add=True)
@@ -104,9 +110,9 @@ class PIDDiagram(models.Model):
     
     # File management
     original_file = models.FileField(
-        upload_to='pid_diagrams/%Y/%m/',
-        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'dwg', 'png', 'jpg', 'jpeg', 'tiff'])],
-        help_text="Upload P&ID file (PDF, DWG, PNG, JPG, TIFF)"
+        upload_to=get_file_upload_path,
+        validators=[FileExtensionValidator(allowed_extensions=['pdf', 'dwg', 'dxf', 'png', 'jpg', 'jpeg', 'tiff'])],
+        help_text="Upload P&ID file (PDF, DWG, DXF, PNG, JPG, TIFF)"
     )
     file_size = models.BigIntegerField(null=True, blank=True)
     

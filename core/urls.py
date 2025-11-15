@@ -8,6 +8,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
     SpectacularRedocView,
 )
+from apps.core.simple_contact import simple_contact_submit
 
 # Health check view
 def health_check(request):
@@ -35,7 +36,12 @@ urlpatterns = [
     path('api/users/', include('apps.users.urls')),
     path('api/core/', include('apps.core.urls')),
     path('api/ai/', include('apps.ai.urls')),
-    path('api/', include('apps.pid_analysis.urls')),
+    
+    # Simple contact form (fallback)
+    path('api/contact/submit/', simple_contact_submit, name='simple-contact-submit'),
+    
+    # PID Analysis (may have import issues)
+    # path('api/', include('apps.pid_analysis.urls')),
 ]
 
 # Serve media files in development
