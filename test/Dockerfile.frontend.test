@@ -1,0 +1,164 @@
+# EDRS Frontend Test Container
+# Optimized for automated testing and CI/CD
+
+FROM node:18-alpine
+
+# Set test environment variables
+ENV NODE_ENV=test \
+    CI=true \
+    TESTING=true \
+    NPM_CONFIG_LOGLEVEL=warn \
+    NPM_CONFIG_FUND=false \
+    NPM_CONFIG_AUDIT=false
+
+# Install system dependencies for testing
+RUN apk add --no-cache \
+    curl \
+    git \
+    chromium \
+    chromium-chromedriver \
+    xvfb \
+    && rm -rf /var/cache/apk/*
+
+# Set work directory
+WORKDIR /app
+
+# Create test directories
+RUN mkdir -p /app/test-reports /app/coverage
+
+# Copy package files
+COPY frontend/package*.json ./
+
+# Install dependencies (including test dependencies)
+RUN npm ci
+
+# Install additional test dependencies
+RUN npm install --save-dev \
+    @testing-library/jest-dom@6.1.4 \
+    @testing-library/react@13.4.0 \
+    @testing-library/user-event@14.5.1 \
+    @vitejs/plugin-react@4.1.1 \
+    vitest@0.34.6 \
+    @vitest/ui@0.34.6 \
+    jsdom@22.1.0 \
+    puppeteer@21.5.2 \
+    playwright@1.40.0
+
+# Copy frontend project
+COPY frontend/ .
+
+# Create test wait script
+RUN echo '#!/bin/sh\n\
+echo "⏳ Waiting for test backend..."\n\
+while ! curl -f -s http://backend-test:8000/health/ > /dev/null; do\n\
+  echo "⏳ Backend test service not ready, waiting..."\n\
+  sleep 3\n\
+done\n\
+echo "✅ Backend test service is ready!"\n\
+echo "🧪 All test services are ready!"' > /app/wait_for_backend.sh && chmod +x /app/wait_for_backend.sh
+
+# Create test configuration
+RUN echo 'import { defineConfig } from '\''vite'\''\n\
+import react from '\''@vitejs/plugin-react'\''\n\
+\n\
+export default defineConfig({\n\
+  plugins: [react()],\n\
+  test: {\n\
+    globals: true,\n\
+    environment: '\''jsdom'\'',\n\
+    setupFiles: '\''./src/test/setup.js'\'',\n\
+    coverage: {\n\
+      reporter: ['\''text'\'', '\''json'\'', '\''html'\''],\n\
+      reportsDirectory: '\''./test-reports/coverage'\'',\n\
+    },\n\
+  },\n\
+  define: {\n\
+    __API_URL__: JSON.stringify('\''http://backend-test:8000'\''),\n\
+    __ENVIRONMENT__: JSON.stringify('\''test'\''),\n\
+  },\n\
+})' > /app/vite.config.test.js
+
+# Create test setup file
+RUN echo 'import '\''@testing-library/jest-dom'\''\n\
+\n\
+// Mock API for testing\n\
+global.fetch = vi.fn()\n\
+\n\
+// Setup test environment\n\
+beforeEach(() => {\n\
+  fetch.mockClear()\n\
+})' > /app/src/test/setup.js
+
+# Create test runner script
+RUN echo '#!/bin/sh\n\
+echo "🧪 Running EDRS Frontend Tests..."\n\
+\n\
+# Wait for backend\n\
+./wait_for_backend.sh\n\
+\n\
+# Run unit tests\n\
+echo "🧪 Running unit tests..."\n\
+npm run test:unit || TEST_FAILED=1\n\
+\n\
+# Run integration tests\n\
+echo "🔗 Running integration tests..."\n\
+npm run test:integration || TEST_FAILED=1\n\
+\n\
+# Build application for testing\n\
+echo "🏗️  Building test application..."\n\
+npm run build || BUILD_FAILED=1\n\
+\n\
+# Run E2E tests if build succeeded\n\
+if [ -z "$BUILD_FAILED" ]; then\n\
+  echo "🔄 Running E2E tests..."\n\
+  npm run test:e2e || E2E_FAILED=1\n\
+fi\n\
+\n\
+# Generate test report\n\
+echo "📊 Generating test reports..."\n\
+npm run test:report || echo "⚠️  Report generation failed"\n\
+\n\
+# Summary\n\
+echo "📊 Frontend Test Summary:"\n\
+[ -z "$TEST_FAILED" ] && echo "✅ Unit/Integration Tests: PASSED" || echo "❌ Unit/Integration Tests: FAILED"\n\
+[ -z "$BUILD_FAILED" ] && echo "✅ Build: PASSED" || echo "❌ Build: FAILED"\n\
+[ -z "$E2E_FAILED" ] && echo "✅ E2E Tests: PASSED" || echo "❌ E2E Tests: FAILED"\n\
+\n\
+# Exit with error if any tests failed\n\
+if [ -n "$TEST_FAILED" ] || [ -n "$BUILD_FAILED" ] || [ -n "$E2E_FAILED" ]; then\n\
+  echo "❌ Some tests failed!"\n\
+  exit 1\n\
+else\n\
+  echo "✅ All tests passed!"\n\
+  exit 0\n\
+fi' > /app/run_frontend_tests.sh && chmod +x /app/run_frontend_tests.sh
+
+# Create test preview script
+RUN echo '#!/bin/sh\n\
+echo "🧪 Starting Frontend Test Preview..."\n\
+\n\
+# Wait for backend\n\
+./wait_for_backend.sh\n\
+\n\
+# Build application\n\
+echo "🏗️  Building application..."\n\
+npm run build\n\
+\n\
+# Start preview server\n\
+echo "🚀 Starting test preview server..."\n\
+npm run preview -- --host 0.0.0.0 --port 3000' > /app/start_test_preview.sh && chmod +x /app/start_test_preview.sh
+
+# Expose test port
+EXPOSE 3000
+
+# Health check for test frontend
+HEALTHCHECK --interval=10s --timeout=5s --start-period=45s --retries=3 \
+    CMD curl -f http://localhost:3000 || exit 1
+
+# Test environment labels
+LABEL edrs.environment=test
+LABEL edrs.component=frontend
+LABEL edrs.testing=true
+
+# Default command runs tests then starts preview
+CMD ["./start_test_preview.sh"]

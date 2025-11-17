@@ -119,11 +119,7 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
-.env
-.env.local
-.env.production
-.env.staging
+# Python Virtual Environments
 .venv
 env/
 venv/
@@ -181,3 +177,54 @@ logs/
 
 # Local settings
 local_settings.py
+
+# ========================
+# SECURITY - SENSITIVE FILES
+# ========================
+
+# Environment files (NEVER COMMIT THESE)
+*.env
+*.env.*
+!*.env.example
+
+# Backup files that might contain secrets
+backup/
+backup_*/
+*.backup
+*.bak
+
+# API Keys and Secrets
+secrets/
+keys/
+*.key
+*.pem
+*.p12
+*.pfx
+certificates/
+
+# AWS credentials
+.aws/
+aws-credentials*
+
+# Database dumps and exports
+*.sql
+*.dump
+*.csv.backup
+
+# Test files that might contain secrets
+test/.env*
+test/secrets/
+test_*secret*
+
+# IDE files that might contain credentials
+.vscode/settings.json
+.idea/workspace.xml
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
