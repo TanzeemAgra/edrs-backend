@@ -16,7 +16,7 @@ from datetime import datetime
 import json
 
 @api_view(['POST'])
-@permission_classes([IsAuthenticated])
+@permission_classes([])  # Temporarily allow unauthenticated access for debugging
 @parser_classes([MultiPartParser, FormParser])
 def simple_document_upload(request):
     """
@@ -71,8 +71,10 @@ def simple_document_upload(request):
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     safe_filename = f"{timestamp}_{unique_id}_{uploaded_file.name}"
     
-    # Create organized file path
-    user_id = request.user.id
+    # Create organized file path - handle both authenticated and unauthenticated users
+    user_id = request.user.id if request.user.is_authenticated else 'anonymous'
+    user_email = request.user.email if request.user.is_authenticated else 'anonymous@example.com'
+    user_name = f"{request.user.first_name} {request.user.last_name}".strip() if request.user.is_authenticated else 'Anonymous User'
     year_month = datetime.now().strftime('%Y/%m')
     
     # Organize files by user and date
@@ -109,9 +111,9 @@ def simple_document_upload(request):
                 'drawing_number': drawing_number,
                 'drawing_title': drawing_title,
                 'uploaded_by': {
-                    'id': request.user.id,
-                    'email': request.user.email,
-                    'name': f"{request.user.first_name} {request.user.last_name}".strip()
+                    'id': user_id,
+                    'email': user_email,
+                    'name': user_name
                 },
                 'uploaded_at': datetime.now().isoformat(),
                 'storage_type': storage_type
@@ -119,7 +121,7 @@ def simple_document_upload(request):
         }
         
         # Log upload for analytics
-        print(f"📄 Document uploaded: {uploaded_file.name} by {request.user.email}")
+        print(f"📄 Document uploaded: {uploaded_file.name} by {user_email}")
         
         return Response(document_info, status=status.HTTP_201_CREATED)
         
@@ -131,7 +133,7 @@ def simple_document_upload(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])
+@permission_classes([])  # Temporarily allow unauthenticated access for debugging
 def list_user_documents(request):
     """
     List user's uploaded documents
@@ -139,14 +141,15 @@ def list_user_documents(request):
     GET /api/core/my-documents/
     """
     
-    user_id = request.user.id
+    user_id = request.user.id if request.user.is_authenticated else 'anonymous'
+    user_email = request.user.email if request.user.is_authenticated else 'anonymous@example.com'
     
     try:
         # For now, return a simple message since we don't have a database model
         # In production, you'd query a Document model here
         
         return Response({
-            'message': f'Documents for user {request.user.email}',
+            'message': f'Documents for user {user_email}',
             'user_id': user_id,
             'note': 'Document listing requires database model implementation',
             'upload_endpoint': '/api/core/upload-document/',
@@ -162,7 +165,7 @@ def list_user_documents(request):
 
 
 @api_view(['GET'])
-@permission_classes([IsAuthenticated])  
+@permission_classes([])  # Temporarily allow unauthenticated access for debugging
 def test_s3_connection(request):
     """
     Test AWS S3 connection and configuration
