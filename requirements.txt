@@ -1,56 +1,11 @@
-# EDRS Backend Requirements - Railway Compatible
-# Optimized for Python 3.12 and Railway deployment
+# EDRS Backend Requirements - Minimal for Railway
+# Essential packages only for successful deployment
 
-# Core Framework - LTS versions
 Django==4.2.16
 djangorestframework==3.14.0
 django-cors-headers==4.3.1
-
-# Database - PostgreSQL primary
-psycopg2-binary==2.9.9
-dj-database-url==2.1.0
-
-# Configuration
-python-decouple==3.8
-
-# Authentication & Security
-djangorestframework-simplejwt==5.3.0
-django-allauth==0.63.6
-
-# API Documentation
-drf-spectacular==0.27.2
-
-# File Storage - AWS S3
-django-storages==1.14.4
-boto3==1.35.36
-
-# Static Files
-whitenoise==6.7.0
-
-# Production Server
 gunicorn==22.0.0
-
-# Environment Management
-python-dotenv==1.0.1
-
-# Image Processing
-Pillow==10.4.0
-
-# HTTP Requests
-requests==2.32.3
-
-# Date/Time utilities  
-python-dateutil==2.9.0
-
-# JSON Web Token
-PyJWT==2.9.0
-
-# Development Tools (conditional)
-django-extensions==3.2.3
-
-# Basic utilities
-six==1.16.0
-certifi==2024.8.30
-charset-normalizer==3.4.0
-idna==3.10
-typing-extensions==4.12.2
+python-decouple==3.8
+whitenoise==6.7.0
+dj-database-url==2.1.0
+psycopg2-binary==2.9.9
