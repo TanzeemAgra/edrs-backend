@@ -28,10 +28,10 @@ urlpatterns = [
     path('api/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
     
     # API Routes
-    path('api/auth/', include('apps.authentication.urls')),
-    path('api/users/', include('apps.users.urls')),
+    # path('api/auth/', include('apps.authentication.urls')),  # Disabled temporarily
+    # path('api/users/', include('apps.users.urls')),          # Disabled temporarily
     path('api/core/', include('apps.core.urls')),
-    path('api/ai/', include('apps.ai.urls')),
+    # path('api/ai/', include('apps.ai.urls')),                # Disabled temporarily
     
     # Simple contact form (disabled for deployment)
     # path('api/contact/submit/', simple_contact_submit, name='simple-contact-submit'),

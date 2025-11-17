@@ -44,11 +44,11 @@ if importlib.util.find_spec('django_filters'):
     THIRD_PARTY_APPS.append('django_filters')
 
 LOCAL_APPS = [
-    'apps.authentication',
-    'apps.users',
+    # 'apps.authentication',  # Disabled temporarily
+    # 'apps.users',           # Disabled - missing User model
     'apps.core',
-    'apps.ai',
-    'apps.pid_analysis',
+    # 'apps.ai',              # Disabled temporarily  
+    # 'apps.pid_analysis',    # Disabled temporarily
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
@@ -370,8 +370,8 @@ CONTACT_EMAIL_RECIPIENTS = config(
     cast=lambda v: [email.strip() for email in v.split(',')]
 )
 
-# Custom User Model
-AUTH_USER_MODEL = 'users.User'
+# Use Django's default User Model (temporary fix)
+# AUTH_USER_MODEL = 'users.User'  # Disabled until users.User model is created
 
 # =================================================================
 # 🤖 OPENAI CONFIGURATION (Local Development)
