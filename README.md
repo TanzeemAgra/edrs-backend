@@ -1,14 +1,30 @@
-# EDRS Backend
+# 🔧 EDRS - Engineering Document Record System
 
-Professional Django REST API backend for the Engineering Document Review System - designed for industrial-grade document management and P&ID analysis.
+**Production-Ready Full-Stack Application** for engineering document management and P&ID analysis.
 
-## 🏗️ Architecture
+## 🏗️ Clean Architecture
 
-- **Framework**: Django 4.2 + Django REST Framework
-- **Authentication**: JWT Token-based authentication
-- **Databases**: PostgreSQL (primary), MongoDB (analytics), Redis (cache)
-- **Deployment**: Railway
-- **API Documentation**: Swagger/OpenAPI via DRF Spectacular
+This project follows a **clean, deployable architecture** with only two main folders:
+
+### 📂 **Project Structure**
+```
+EDRS/
+├── backend/                 # 🐍 Complete Django REST API
+│   ├── apps/               # Django applications
+│   ├── core/              # Django configuration  
+│   ├── requirements.txt   # Python dependencies
+│   └── manage.py          # Django management
+├── frontend/               # ⚛️ Complete React Application
+│   ├── src/               # React source code
+│   ├── package.json       # Node.js dependencies
+│   └── vite.config.js     # Build configuration
+└── docker-compose.local.yml # 🐳 Local development
+```
+
+### 🎯 **Production Deployment**
+- **Frontend**: Deploys independently to **Vercel** from `frontend/` folder
+- **Backend**: Deploys independently to **Railway/Render** from `backend/` folder
+- **No external dependencies**: Everything contained within these two folders
 
 ## 🚀 Quick Start
 
