@@ -1,1 +1,1 @@
-web: python3 check_imports.py && python3 manage.py migrate --noinput && python3 manage.py collectstatic --noinput && gunicorn core.wsgi:application --bind 0.0.0.0:$PORT --workers 2 --timeout 120
+web: chmod +x startup.sh && ./startup.sh

@@ -18,10 +18,12 @@ RAILWAY_ENVIRONMENT = config('RAILWAY_ENVIRONMENT', default='')
 RAILWAY_PUBLIC_DOMAIN = config('RAILWAY_PUBLIC_DOMAIN', default='')
 
 # Configure ALLOWED_HOSTS for Railway deployment
-ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1', cast=lambda v: [s.strip() for s in v.split(',')])
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='*', cast=lambda v: [s.strip() for s in v.split(',')])
 
 # Add Railway-specific hosts
 if RAILWAY_ENVIRONMENT == 'production':
+    ALLOWED_HOSTS = ['*']  # Allow all hosts in production for Railway
+else:
     ALLOWED_HOSTS.extend([
         '.railway.app',
         '.up.railway.app', 
@@ -34,8 +36,9 @@ if RAILWAY_ENVIRONMENT == 'production':
 if RAILWAY_PUBLIC_DOMAIN:
     ALLOWED_HOSTS.append(RAILWAY_PUBLIC_DOMAIN)
 
-# Remove duplicates and empty strings
-ALLOWED_HOSTS = list(filter(None, set(ALLOWED_HOSTS)))
+# Remove duplicates and empty strings (unless wildcard)
+if '*' not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS = list(filter(None, set(ALLOWED_HOSTS)))
 
 # Application definition
 DJANGO_APPS = [
