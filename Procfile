@@ -1,1 +1,1 @@
-web: chmod +x startup.sh && ./startup.sh
+web: gunicorn core.wsgi:application --bind 0.0.0.0:$PORT
