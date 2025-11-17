@@ -1,0 +1,13 @@
+{
+  "success": false,
+  "passed": 0,
+  "total": 1,
+  "results": [
+    {
+      "test": "AWS Credentials Check",
+      "status": false,
+      "details": "AWS_ACCESS_KEY_ID not configured or using placeholder",
+      "timestamp": "2025-11-17T13:29:16.614561"
+    }
+  ]
+}
