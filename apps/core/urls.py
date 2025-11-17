@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from . import dashboard_views
 
 urlpatterns = [
     # Categories
@@ -14,8 +15,11 @@ urlpatterns = [
     path('posts/', views.PostListCreateView.as_view(), name='post-list-create'),
     path('posts/<slug:slug>/', views.PostDetailView.as_view(), name='post-detail'),
     
-    # Dashboard & Analytics
-    path('dashboard/stats/', views.dashboard_stats_view, name='dashboard-stats'),
+    # Dashboard & Analytics  
+    path('dashboard/stats/', dashboard_views.dashboard_stats, name='dashboard-stats'),
+    path('dashboard/charts/', dashboard_views.dashboard_charts, name='dashboard-charts'),
+    path('dashboard/notifications/', dashboard_views.dashboard_notifications, name='dashboard-notifications'),
+    path('dashboard/activities/', dashboard_views.dashboard_activities, name='dashboard-activities'),
     path('analytics/track/', views.track_analytics_view, name='track-analytics'),
     path('activity/log/', views.log_activity_view, name='log-activity'),
     

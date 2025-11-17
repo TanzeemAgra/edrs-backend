@@ -146,18 +146,19 @@ class PIDDiagramViewSet(viewsets.ModelViewSet):
         
         # Parse analysis configuration
         config_data = request.data
+        from .services.enhanced_analysis import AnalysisConfig
         analysis_config = AnalysisConfig(
-            analysis_depth=config_data.get('analysis_depth', 'standard'),
-            include_safety_analysis=config_data.get('include_safety_analysis', True),
-            include_standards_check=config_data.get('include_standards_check', True),
-            confidence_threshold=float(config_data.get('confidence_threshold', 0.7))
+            model=config_data.get('model', 'gpt-4o'),
+            temperature=float(config_data.get('temperature', 0.2)),
+            confidence_threshold=float(config_data.get('confidence_threshold', 0.7)),
+            max_retries=int(config_data.get('max_retries', 3))
         )
         
         # Create analysis session
         session = AnalysisSession.objects.create(
             diagram=diagram,
             llm_model=analysis_config.model,
-            analysis_depth=analysis_config.analysis_depth,
+            analysis_depth='comprehensive',
             include_recommendations=True,
             initiated_by=request.user
         )
@@ -167,11 +168,14 @@ class PIDDiagramViewSet(viewsets.ModelViewSet):
         diagram.processing_started_at = timezone.now()
         diagram.save()
         
-        # Start asynchronous analysis
+        # Start enhanced analysis
         try:
+            # Import enhanced service
+            from .services.enhanced_analysis import analysis_service
+            
             # Run analysis in background
             asyncio.create_task(
-                self._run_analysis_async(diagram, session, analysis_config)
+                self._run_enhanced_analysis_async(diagram, session, analysis_service)
             )
             
             return Response({
@@ -395,6 +399,115 @@ class PIDDiagramViewSet(viewsets.ModelViewSet):
             })
         
         return Response(response_data)
+
+    async def _run_enhanced_analysis_async(self, diagram, session, analysis_service):
+        """Run enhanced P&ID analysis with fallback capabilities"""
+        
+        try:
+            # Progress callback
+            async def progress_callback(message, percent):
+                session.status = 'processing'
+                session.progress_percent = percent
+                session.current_step = message
+                await asyncio.to_thread(session.save)
+            
+            # Prepare project context
+            project_context = {
+                'name': diagram.project.name,
+                'project_type': diagram.project.project_type,
+                'engineering_standard': diagram.project.engineering_standard,
+                'field_name': getattr(diagram.project, 'field_name', ''),
+            }
+            
+            # Get diagram file path
+            diagram_path = diagram.original_file.path if diagram.original_file else None
+            
+            # Run analysis
+            detected_errors, analysis_metadata = await analysis_service.analyze_diagram(
+                diagram_path,
+                project_context,
+                progress_callback
+            )
+            
+            # Save results
+            await asyncio.to_thread(self._save_analysis_results, 
+                                  diagram, session, detected_errors, analysis_metadata)
+            
+        except Exception as e:
+            # Handle errors gracefully
+            await asyncio.to_thread(self._handle_analysis_error, diagram, session, str(e))
+    
+    def _save_analysis_results(self, diagram, session, errors, metadata):
+        """Save analysis results to database"""
+        
+        from django.db import transaction
+        
+        with transaction.atomic():
+            # Update session
+            session.status = 'completed'
+            session.progress_percent = 100
+            session.current_step = 'Analysis complete'
+            session.total_errors_found = len(errors)
+            session.processing_time_seconds = metadata.get('total_processing_time', 0)
+            session.completed_at = timezone.now()
+            session.save()
+            
+            # Update diagram
+            diagram.status = 'analyzed'
+            diagram.processing_completed_at = timezone.now()
+            diagram.total_errors_found = len(errors)
+            
+            # Count by severity
+            diagram.critical_errors = len([e for e in errors if e.severity == 'Critical'])
+            diagram.high_priority_errors = len([e for e in errors if e.severity == 'High'])
+            diagram.medium_priority_errors = len([e for e in errors if e.severity == 'Medium'])
+            diagram.low_priority_errors = len([e for e in errors if e.severity == 'Low'])
+            diagram.save()
+            
+            # Save individual errors
+            for error in errors:
+                # Get or create error category
+                category, created = ErrorCategory.objects.get_or_create(
+                    name=error.category,
+                    defaults={
+                        'description': f'{error.category} related errors',
+                        'severity_level': error.severity.lower(),
+                        'is_safety_critical': error.safety_impact
+                    }
+                )
+                
+                # Create analysis result
+                PIDAnalysisResult.objects.create(
+                    diagram=diagram,
+                    session=session,
+                    category=category,
+                    error_type=error.subcategory or 'General',
+                    title=error.title,
+                    description=error.description,
+                    severity=error.severity,
+                    confidence_score=error.confidence,
+                    element_tag=error.element_tag,
+                    coordinates_x=error.coordinates[0] if error.coordinates else 0,
+                    coordinates_y=error.coordinates[1] if error.coordinates else 0,
+                    violated_standard=error.violated_standard,
+                    standard_reference=error.standard_reference,
+                    recommended_fix=error.recommended_fix,
+                    safety_impact=error.safety_impact,
+                    cost_impact=error.cost_impact,
+                    root_cause_analysis=error.root_cause,
+                    status='identified'
+                )
+    
+    def _handle_analysis_error(self, diagram, session, error_message):
+        """Handle analysis errors"""
+        
+        session.status = 'failed'
+        session.error_message = error_message
+        session.completed_at = timezone.now()
+        session.save()
+        
+        diagram.status = 'error'
+        diagram.save()
 
 
 class AnalysisResultViewSet(viewsets.ReadOnlyModelViewSet):
