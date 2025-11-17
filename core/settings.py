@@ -11,6 +11,7 @@ SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-producti
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = config('DEBUG', default=True, cast=bool)
+print(f"[SETTINGS DEBUG] DEBUG value: {DEBUG}")  # Debug print
 
 # Railway deployment configuration
 RAILWAY_ENVIRONMENT = config('RAILWAY_ENVIRONMENT', default='')
