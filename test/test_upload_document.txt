@@ -1,9 +1,0 @@
-Test P&ID Document for EDRS Upload
-This is a sample document to test the upload functionality.
-
-Project: Test Project  
-Document Type: P&ID Diagram
-Drawing Number: TEST-001
-Revision: A
-
-Created for testing document upload and AWS S3 integration.
