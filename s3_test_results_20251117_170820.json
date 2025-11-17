@@ -1,0 +1,28 @@
+{
+  "bucket_name": "rejlers-edrs-project",
+  "bucket_arn": "arn:aws:s3:::rejlers-edrs-project",
+  "region": "us-east-1",
+  "timestamp": "2025-11-17T17:08:19.459672",
+  "tests": {
+    "boto3_available": {
+      "success": true,
+      "version": "1.40.74"
+    },
+    "credentials": {
+      "success": false,
+      "error": "No AWS credentials found"
+    },
+    "bucket_access": {
+      "success": false,
+      "error": "Unexpected bucket access error: Unable to locate credentials"
+    },
+    "upload_permission": {
+      "success": false,
+      "error": "Upload test error: Unable to locate credentials"
+    },
+    "django_integration": {
+      "success": false,
+      "error": "Django integration error: No module named 'core.storage'"
+    }
+  }
+}
