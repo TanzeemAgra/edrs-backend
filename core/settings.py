@@ -6,8 +6,8 @@ from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-SECRET_KEY = 'emergency-test-key-12345'
-DEBUG = True  # Enable debug to see error details
+SECRET_KEY = os.environ.get('SECRET_KEY', 'emergency-test-key-12345')
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 ALLOWED_HOSTS = ['*']
 
 INSTALLED_APPS = [
