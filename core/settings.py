@@ -1,42 +1,150 @@
-"""
-Minimal Django settings for Railway deployment test
-"""
-
 import os
 from pathlib import Path
+from decouple import config
+import dj_database_url
 
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-test-key-change-in-production')
+SECRET_KEY = config('SECRET_KEY', default='django-insecure-change-me-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = config('DEBUG', default=True, cast=bool)
+print(f"[SETTINGS DEBUG] DEBUG value: {DEBUG}")  # Debug print
 
-ALLOWED_HOSTS = ['*']
+# Railway deployment configuration
+RAILWAY_ENVIRONMENT = config('RAILWAY_ENVIRONMENT', default='')
+RAILWAY_PUBLIC_DOMAIN = config('RAILWAY_PUBLIC_DOMAIN', default='')
+
+# Configure ALLOWED_HOSTS for Railway deployment
+ALLOWED_HOSTS = ['*']  # Allow all hosts for Railway deployment
 
 # Application definition
-INSTALLED_APPS = [
-    'django.contrib.contenttypes',
+DJANGO_APPS = [
+    'django.contrib.admin',
     'django.contrib.auth',
+    'django.contrib.contenttypes',
+    'django.contrib.sessions',
+    'django.contrib.messages',
+    'django.contrib.staticfiles',
 ]
 
+THIRD_PARTY_APPS = [
+    'rest_framework',
+    'corsheaders',
+    'drf_spectacular',
+]
+
+# Only add these if installed (optional dev dependencies)
+import importlib.util
+if importlib.util.find_spec('django_extensions'):
+    THIRD_PARTY_APPS.append('django_extensions')
+if importlib.util.find_spec('django_filters'):
+    THIRD_PARTY_APPS.append('django_filters')
+
+LOCAL_APPS = [
+    'apps.authentication',
+    'apps.users',
+    'apps.core',
+    'apps.ai',
+    'apps.pid_analysis',
+]
+
+INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
+
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'django.middleware.csrf.CsrfViewMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'django.contrib.messages.middleware.MessageMiddleware',
+    'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
 ROOT_URLCONF = 'core.urls'
 
+TEMPLATES = [
+    {
+        'BACKEND': 'django.template.backends.django.DjangoTemplates',
+        'DIRS': [BASE_DIR / 'templates'],
+        'APP_DIRS': True,
+        'OPTIONS': {
+            'context_processors': [
+                'django.template.context_processors.debug',
+                'django.template.context_processors.request',
+                'django.contrib.auth.context_processors.auth',
+                'django.contrib.messages.context_processors.messages',
+            ],
+        },
+    },
+]
+
 WSGI_APPLICATION = 'core.wsgi.application'
 
-# Database - Use SQLite for simplicity
+# Database Configuration
+# PostgreSQL as primary database
+DATABASE_URL = config('DATABASE_URL', default='postgresql://postgres:postgres@localhost:5432/edrs_db')
+
+# Parse database URL with Railway-specific handling
 DATABASES = {
+    'default': dj_database_url.config(
+        default=DATABASE_URL,
+        conn_max_age=600,
+        conn_health_checks=True,
+    )
+}
+
+# Railway-specific database configuration
+if RAILWAY_ENVIRONMENT == 'production':
+    # Ensure SSL is enabled for Railway PostgreSQL
+    DATABASES['default']['OPTIONS'] = {
+        'sslmode': 'require',
+    }
+
+# MongoDB Configuration (using mongoengine)
+MONGODB_SETTINGS = {
+    'db': config('MONGO_DB_NAME', default='edrs_mongo'),
+    'host': config('MONGODB_URI', default='mongodb://localhost:27017/edrs_mongo'),
+}
+
+# Cache Configuration (Redis)
+# Temporarily disabled for initial setup
+CACHES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
     }
 }
+
+# Redis cache configuration (uncomment when django_redis is installed)
+# CACHES = {
+#     'default': {
+#         'BACKEND': 'django_redis.cache.RedisCache',
+#         'LOCATION': config('REDIS_URL', default='redis://localhost:6379/1'),
+#         'OPTIONS': {
+#             'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+#         }
+#     }
+# }
+
+# Password validation
+AUTH_PASSWORD_VALIDATORS = [
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
+]
 
 # Internationalization
 LANGUAGE_CODE = 'en-us'
@@ -44,5 +152,242 @@ TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+# Only add static dirs if they exist
+STATICFILES_DIRS = []
+if (BASE_DIR / 'static').exists():
+    STATICFILES_DIRS.append(BASE_DIR / 'static')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# Media files
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
+
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# REST Framework Configuration
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PARSER_CLASSES': [
+        'rest_framework.parsers.JSONParser',
+        'rest_framework.parsers.MultiPartParser',
+        'rest_framework.parsers.FormParser',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_FILTER_BACKENDS': [
+        'django_filters.rest_framework.DjangoFilterBackend',
+        'rest_framework.filters.SearchFilter',
+        'rest_framework.filters.OrderingFilter',
+    ],
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
+}
+
+# Spectacular settings (API Documentation)
+SPECTACULAR_SETTINGS = {
+    'TITLE': 'EDRS Engineering Platform API',
+    'DESCRIPTION': 'Professional engineering document management and P&ID analysis platform API',
+    'VERSION': '1.0.0',
+    'SERVE_INCLUDE_SCHEMA': False,
+}
+
+# CORS Configuration - Enhanced for Railway/Vercel deployment
+CORS_ALLOWED_ORIGINS = config(
+    'CORS_ALLOWED_ORIGINS',
+    default='http://localhost:3000,http://127.0.0.1:3000,https://edrs-frontend.vercel.app',
+    cast=lambda v: [s.strip() for s in v.split(',')]
+)
+
+# Add comprehensive Vercel deployment domains
+vercel_domains = [
+    'https://edrs-frontend.vercel.app',
+    'https://edrs-frontend-git-main.vercel.app',
+    'https://edrs-frontend-git-main-tanzeemagra.vercel.app',
+    'https://edrs-frontend-tanzeemagra.vercel.app',
+]
+
+# Add all Vercel domains to CORS origins
+CORS_ALLOWED_ORIGINS.extend(vercel_domains)
+
+# Enhanced CORS settings for production deployment
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # Keep security by specifying origins
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://edrs-frontend.*\.vercel\.app$",  # All Vercel preview deployments
+    r"^http://localhost:[0-9]+$",  # Local development
+]
+
+# Allow specific headers for file uploads and API calls
+CORS_ALLOW_HEADERS = [
+    'accept',
+    'accept-encoding',
+    'authorization',
+    'content-type',
+    'dnt',
+    'origin',
+    'user-agent',
+    'x-csrftoken',
+    'x-requested-with',
+    'x-forwarded-for',
+    'x-forwarded-proto',
+    'cache-control',
+]
+
+# Allow specific methods for REST API
+CORS_ALLOW_METHODS = [
+    'DELETE',
+    'GET',
+    'OPTIONS',
+    'PATCH',
+    'POST',
+    'PUT',
+]
+
+# Preflight cache time (1 hour)
+CORS_PREFLIGHT_MAX_AGE = 3600
+
+# Debug CORS configuration
+if DEBUG:
+    print(f"[CORS DEBUG] Allowed Origins: {CORS_ALLOWED_ORIGINS}")
+    print(f"[CORS DEBUG] Railway Environment: {RAILWAY_ENVIRONMENT}")
+
+# Development CORS settings (more permissive for debugging)
+if DEBUG:
+    # Allow localhost with any port for development
+    CORS_ALLOWED_ORIGINS.extend([
+        'http://localhost:3000',
+        'http://localhost:3001', 
+        'http://localhost:5173',  # Vite dev server
+        'http://127.0.0.1:3000',
+        'http://127.0.0.1:3001',
+        'http://127.0.0.1:5173',
+    ])
+    # More permissive in development
+    CORS_ALLOW_ALL_ORIGINS = False  # Still keep origins controlled
+
+# Security Settings (Production)
+if not DEBUG:
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_SECONDS = 31536000
+    SECURE_REDIRECT_EXEMPT = []
+    SECURE_SSL_REDIRECT = True
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Logging Configuration
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'file': {
+            'level': 'INFO',
+            'class': 'logging.FileHandler',
+            'filename': BASE_DIR / 'logs/django.log',
+            'formatter': 'verbose',
+        },
+        'console': {
+            'level': 'DEBUG',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'WARNING',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['file', 'console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+# Create logs directory
+os.makedirs(BASE_DIR / 'logs', exist_ok=True)
+
+# Celery Configuration (for background tasks)
+CELERY_BROKER_URL = config('REDIS_URL', default='redis://localhost:6379/0')
+CELERY_RESULT_BACKEND = config('REDIS_URL', default='redis://localhost:6379/0')
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# Email Configuration - AWS SES Integration
+USE_AWS_SES = config('USE_AWS_SES', default=False, cast=bool)
+
+if USE_AWS_SES:
+    # AWS SES Configuration
+    EMAIL_BACKEND = 'django_ses.SESBackend'
+    AWS_SES_REGION_NAME = config('AWS_SES_REGION_NAME', default='us-east-1')
+    AWS_SES_REGION_ENDPOINT = f'email.{AWS_SES_REGION_NAME}.amazonaws.com'
+    # Use existing AWS credentials
+    AWS_SES_ACCESS_KEY_ID = config('AWS_ACCESS_KEY_ID', default='')
+    AWS_SES_SECRET_ACCESS_KEY = config('AWS_SECRET_ACCESS_KEY', default='')
+    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='EDRS Support <noreply@rejlers.ae>')
+    SERVER_EMAIL = DEFAULT_FROM_EMAIL
+else:
+    # Fallback SMTP Configuration
+    EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+    EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+    EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+    EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+    EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+    DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='EDRS Support <noreply@rejlers.ae>')
+
+# Contact Form Email Recipients
+CONTACT_EMAIL_RECIPIENTS = config(
+    'CONTACT_EMAIL_RECIPIENTS', 
+    default='mohammed.agra@rejlers.ae',
+    cast=lambda v: [email.strip() for email in v.split(',')]
+)
+
+# Custom User Model
+AUTH_USER_MODEL = 'users.User'
+
+# =================================================================
+# 🤖 OPENAI CONFIGURATION (Local Development)
+# =================================================================
+
+# OpenAI Settings (secure, environment-based)
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', '')
+OPENAI_MODEL = os.getenv('OPENAI_MODEL', 'gpt-3.5-turbo')
+OPENAI_MAX_TOKENS = int(os.getenv('OPENAI_MAX_TOKENS', '1000'))
+OPENAI_TEMPERATURE = float(os.getenv('OPENAI_TEMPERATURE', '0.7'))
+
+# OpenAI Configuration Object
+OPENAI_SETTINGS = {
+    'api_key': OPENAI_API_KEY,
+    'model': OPENAI_MODEL,
+    'max_tokens': OPENAI_MAX_TOKENS,
+    'temperature': OPENAI_TEMPERATURE,
+    'enabled': os.getenv('ENABLE_OPENAI_INTEGRATION', 'False').lower() == 'true',
+}
