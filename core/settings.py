@@ -86,30 +86,31 @@ TEMPLATES = [
 WSGI_APPLICATION = 'core.wsgi.application'
 
 # Database Configuration
-# PostgreSQL as primary database
-DATABASE_URL = config('DATABASE_URL', default='postgresql://postgres:postgres@localhost:5432/edrs_db')
-
-# Parse database URL with Railway-specific handling
+# SQLite for now to eliminate DB connection issues
 DATABASES = {
-    'default': dj_database_url.config(
-        default=DATABASE_URL,
-        conn_max_age=600,
-        conn_health_checks=True,
-    )
-}
-
-# Railway-specific database configuration
-if RAILWAY_ENVIRONMENT == 'production':
-    # Ensure SSL is enabled for Railway PostgreSQL
-    DATABASES['default']['OPTIONS'] = {
-        'sslmode': 'require',
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
     }
-
-# MongoDB Configuration (using mongoengine)
-MONGODB_SETTINGS = {
-    'db': config('MONGO_DB_NAME', default='edrs_mongo'),
-    'host': config('MONGODB_URI', default='mongodb://localhost:27017/edrs_mongo'),
 }
+
+# PostgreSQL configuration (disabled for now)
+# DATABASE_URL = config('DATABASE_URL', default='postgresql://postgres:postgres@localhost:5432/edrs_db')
+# DATABASES = {
+#     'default': dj_database_url.config(
+#         default=DATABASE_URL,
+#         conn_max_age=600,
+#         conn_health_checks=True,
+#     )
+# }
+# if RAILWAY_ENVIRONMENT == 'production':
+#     DATABASES['default']['OPTIONS'] = {'sslmode': 'require'}
+
+# MongoDB Configuration (disabled for now)
+# MONGODB_SETTINGS = {
+#     'db': config('MONGO_DB_NAME', default='edrs_mongo'),
+#     'host': config('MONGODB_URI', default='mongodb://localhost:27017/edrs_mongo'),
+# }
 
 # Cache Configuration (Redis)
 # Temporarily disabled for initial setup
