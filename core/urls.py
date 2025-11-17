@@ -40,7 +40,7 @@ urlpatterns = [
     # Simple contact form (fallback)
     path('api/contact/submit/', simple_contact_submit, name='simple-contact-submit'),
     
-    # PID Analysis (may have import issues)
+    # PID Analysis (temporarily disabled for debugging)
     # path('api/', include('apps.pid_analysis.urls')),
 ]
 

@@ -5,10 +5,7 @@ EDRS P&ID Analysis URL Configuration
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from rest_framework_nested import routers
-from .views import (
-    PIDProjectViewSet, PIDDiagramViewSet, 
-    AnalysisSessionViewSet, AnalysisResultViewSet
-)
+from . import views
 from .views.document_library import (
     DocumentLibraryView, 
     S3DocumentBrowserView, 
@@ -20,16 +17,16 @@ app_name = 'pid_analysis'
 
 # Create main router
 router = DefaultRouter()
-router.register(r'pid-analysis/projects', PIDProjectViewSet, basename='pidproject')
-router.register(r'pid-analysis/analysis-sessions', AnalysisSessionViewSet, basename='pidanalysissession')
+router.register(r'pid-analysis/projects', views.PIDProjectViewSet, basename='pidproject')
+router.register(r'pid-analysis/analysis-sessions', views.AnalysisSessionViewSet, basename='pidanalysissession')
 
 # Create nested routers for project-related resources
 projects_router = routers.NestedDefaultRouter(router, r'pid-analysis/projects', lookup='project')
-projects_router.register(r'diagrams', PIDDiagramViewSet, basename='project-diagrams')
+projects_router.register(r'diagrams', views.PIDDiagramViewSet, basename='project-diagrams')
 
 # Create nested router for diagram-related resources
 diagrams_router = routers.NestedDefaultRouter(projects_router, r'diagrams', lookup='diagram')
-diagrams_router.register(r'results', AnalysisResultViewSet, basename='diagram-results')
+diagrams_router.register(r'results', views.AnalysisResultViewSet, basename='diagram-results')
 
 urlpatterns = [
     # Main router URLs

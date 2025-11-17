@@ -1,6 +1,7 @@
 from django.urls import path
 from . import views
 from . import dashboard_views
+from . import simple_upload
 
 urlpatterns = [
     # Categories
@@ -25,6 +26,11 @@ urlpatterns = [
     
     # Database Health Check
     path('database/health/', views.database_health_view, name='database-health'),
+    
+    # Simple Document Upload (temporary solution)
+    path('upload-document/', simple_upload.simple_document_upload, name='simple-upload'),
+    path('my-documents/', simple_upload.list_user_documents, name='my-documents'),
+    path('test-s3/', simple_upload.test_s3_connection, name='test-s3'),
     
     # Document Library and Contact
     path('document-library/', views.document_library, name='document_library'),
