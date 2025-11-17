@@ -21,6 +21,15 @@ test/
 │   ├── wait_for_services.sh     # Service readiness waiter
 │   ├── run_backend_tests.sh     # Backend test runner
 │   └── run_frontend_tests.sh    # Frontend test runner
+├── diagnose_api.py              # API diagnostic tool
+├── test_railway_backend.py      # Railway backend connectivity tests
+├── test_system.py               # System integration tests
+├── validate_database.py         # Database validation tests
+├── validate_dual_database.py    # Dual database setup tests
+├── start_dev_server.py          # Development server starter
+├── test_login.html              # Login functionality test page
+├── test_upload.html             # File upload test page
+├── test_pid_document.txt        # Sample P&ID document for testing
 ├── reports/                     # Generated test reports (created during tests)
 └── logs/                        # Test execution logs (created during tests)
 ```
