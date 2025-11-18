@@ -1,0 +1,4 @@
+# EDRS Backend Local Requirements - Simplified
+Django==4.2.16
+djangorestframework==3.14.0
+django-cors-headers==4.3.1
