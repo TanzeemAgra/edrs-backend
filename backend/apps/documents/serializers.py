@@ -35,8 +35,23 @@ class ProjectSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'updated_at']
     
     def create(self, validated_data):
-        # Automatically set the created_by field
-        validated_data['created_by'] = self.context['request'].user
+        # Automatically set the created_by field - handle anonymous users for development
+        request = self.context['request']
+        if request.user.is_authenticated:
+            user = request.user
+        else:
+            # Create or get a default user for testing
+            from django.contrib.auth.models import User
+            user, created = User.objects.get_or_create(
+                username='tanzeem',
+                defaults={
+                    'email': 'tanzeem@rejlers.ae',
+                    'first_name': 'Tanzeem',
+                    'last_name': 'Agra'
+                }
+            )
+        
+        validated_data['created_by'] = user
         return super().create(validated_data)
 
 
