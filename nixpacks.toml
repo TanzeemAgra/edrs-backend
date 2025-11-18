@@ -1,0 +1,16 @@
+[variables]
+    NIXPACKS_BUILD_CMD = "cd backend && pip install -r requirements.txt && python manage.py collectstatic --noinput"
+    NIXPACKS_START_CMD = "cd backend && python manage.py migrate --noinput && gunicorn core.wsgi:application --bind 0.0.0.0:$PORT"
+
+[phases.setup]
+    nixPkgs = ["python311", "postgresql"]
+
+[phases.build]
+    cmds = [
+        "cd backend",
+        "pip install -r requirements.txt",
+        "python manage.py collectstatic --noinput"
+    ]
+
+[phases.start]
+    cmd = "cd backend && python manage.py migrate --noinput && gunicorn core.wsgi:application --bind 0.0.0.0:$PORT"

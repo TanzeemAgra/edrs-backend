@@ -18,13 +18,13 @@ RUN apt-get update \
         libpq-dev \
         && rm -rf /var/lib/apt/lists/*
 
-# Copy and install Python dependencies
-COPY requirements.txt .
+# Copy and install Python dependencies from backend directory
+COPY backend/requirements.txt .
 RUN pip install --upgrade pip \
     && pip install -r requirements.txt
 
-# Copy project files
-COPY . .
+# Copy backend project files
+COPY backend/ .
 
 # Create directories for static and media files
 RUN mkdir -p /app/static /app/media

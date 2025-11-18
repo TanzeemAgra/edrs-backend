@@ -22,12 +22,12 @@ RUN apt-get update \
         shared-mime-info \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies
-COPY requirements.txt /app/
+# Install Python dependencies from backend directory
+COPY backend/requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project
-COPY . /app/
+# Copy backend project files
+COPY backend/ /app/
 
 # Create media directory
 RUN mkdir -p /app/media
